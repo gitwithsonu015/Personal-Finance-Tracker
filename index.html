@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Finance Tracker</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="style.css">
+    
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyBs6z10odjhFQlR7e_6LQGmZ8mDkfXlxOg",
+        authDomain: "personal-finance-tracker-99cca.firebaseapp.com",
+        projectId: "personal-finance-tracker-99cca",
+        storageBucket: "personal-finance-tracker-99cca.firebasestorage.app",
+        messagingSenderId: "1006250254176",
+        appId: "1:1006250254176:web:2fe4f83e713d30b7750805"
+      };
+      
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const auth = firebase.auth();
+      const db = firebase.firestore();
+    </script>
+</head>
+<body class="bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 min-h-screen text-white">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex flex-col items-center mb-8">
+            <div class="text-6xl mb-4 drop-shadow-2xl animate-bounce">💰</div>
+            <h1 class="text-4xl font-bold text-center bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent drop-shadow-lg">Personal Finance Tracker</h1>
+        </div>
+        
+        <!-- Tabs -->
+        <div class="tabs mb-8">
+            <button class="tab-btn bg-white/10 backdrop-blur-lg border border-white/20 rounded-l-xl px-6 py-3 text-lg font-semibold transition-all duration-300 hover:bg-white/20 active:scale-95 active:shadow-lg shadow-xl" data-tab="dashboard">📊 Dashboard</button>
+            <button class="tab-btn bg-white/10 backdrop-blur-lg border-y border-white/20 px-6 py-3 text-lg font-semibold transition-all duration-300 hover:bg-white/20 active:scale-95 active:shadow-lg shadow-xl" data-tab="add">➕ Add Transaction</button>
+            <button class="tab-btn bg-white/10 backdrop-blur-lg border border-white/20 rounded-r-xl px-6 py-3 text-lg font-semibold transition-all duration-300 hover:bg-white/20 active:scale-95 active:shadow-lg shadow-xl" data-tab="history">📋 History</button>
+        </div>
+        
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content">
+            <div class="balance-card bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8 shadow-2xl mb-8 animate-float">
+                <h2 class="text-3xl font-bold mb-2">Current Balance</h2>
+                <div id="balance" class="text-5xl font-black bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">$0.00</div>
+                <button id="refresh-btn" class="mt-4 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 px-6 py-2 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">🔄 Refresh</button>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="chart-card bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl">
+                    <h3 class="text-2xl font-bold mb-4 text-center">Expense Distribution</h3>
+                    <canvas id="pieChart" height="300"></canvas>
+                </div>
+                <div class="chart-card bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl">
+                    <h3 class="text-2xl font-bold mb-4 text-center">Monthly Trends</h3>
+                    <canvas id="barChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Add Transaction Tab -->
+        <div id="add" class="tab-content hidden">
+            <div class="add-form bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8 shadow-2xl max-w-md mx-auto">
+                <h2 class="text-3xl font-bold mb-8 text-center">Add New Transaction</h2>
+                <div class="space-y-4">
+                    <select id="type" class="w-full p-4 bg-white/20 border border-white/30 rounded-xl text-lg font-semibold focus:outline-none focus:ring-4 ring-blue-500/30 transition-all">
+                        <option value="expense">📉 Expense</option>
+                        <option value="income">📈 Income</option>
+                    </select>
+                    <select id="category" class="w-full p-4 bg-white/20 border border-white/30 rounded-xl text-lg font-semibold focus:outline-none focus:ring-4 ring-purple-500/30 transition-all">
+                        <option value="Food">🍔 Food</option>
+                        <option value="Transport">🚗 Transport</option>
+                        <option value="Salary">💼 Salary</option>
+                        <option value="Entertainment">🎮 Entertainment</option>
+                        <option value="Bills">🏠 Bills</option>
+                        <option value="Other">📦 Other</option>
+                    </select>
+                    <input type="number" id="amount" placeholder="Amount (e.g. 50.00)" class="w-full p-4 bg-white/20 border border-white/30 rounded-xl text-xl font-bold text-right focus:outline-none focus:ring-4 ring-green-500/30 transition-all" min="0" step="0.01">
+                    <input type="text" id="description" placeholder="Description (optional)" class="w-full p-4 bg-white/20 border border-white/30 rounded-xl focus:outline-none focus:ring-4 ring-indigo-500/30 transition-all">
+                    <button id="add-btn" class="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-xl font-bold py-4 px-8 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 text-white">💾 Add Transaction</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- History Tab -->
+        <div id="history" class="tab-content hidden">
+            <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold">Transaction History</h2>
+                    <button id="history-refresh" class="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 px-6 py-2 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all">🔄 Refresh</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="history-table" class="w-full text-left bg-white/20 border border-white/30 rounded-xl">
+                        <thead class="bg-white/30">
+                            <tr>
+                                <th class="p-4 rounded-tl-xl font-bold text-lg">Date</th>
+                                <th class="p-4 font-bold text-lg">Type</th>
+                                <th class="p-4 font-bold text-lg">Category</th>
+                                <th class="p-4 font-bold text-lg">Amount</th>
+                                <th class="p-4 font-bold text-lg">Description</th>
+                                <th class="p-4 rounded-tr-xl font-bold text-lg">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body">
+                            <!-- Dynamic rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
